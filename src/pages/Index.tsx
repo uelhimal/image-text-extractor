@@ -4,7 +4,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ProcessingIndicator } from "@/components/ProcessingIndicator";
 import { InvoiceDataDisplay } from "@/components/InvoiceDataDisplay";
-import { parseInvoiceText, InvoiceData } from "@/utils/invoiceParser";
+import { parseInvoiceText, ParsedInvoice } from "@/utils/invoiceParser";
 import { FileText } from "lucide-react";
 
 const Index = () => {
@@ -14,13 +14,19 @@ const Index = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [extractedText, setExtractedText] = useState("");
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>({});
+  const [parsedInvoice, setParsedInvoice] = useState<ParsedInvoice>({
+    metadata: {},
+    lineItems: [],
+  });
 
   const processImage = useCallback(async (file: File) => {
     setIsProcessing(true);
     setProgress(0);
     setExtractedText("");
-    setInvoiceData({});
+    setParsedInvoice({
+      metadata: {},
+      lineItems: [],
+    });
 
     const worker = await createWorker("eng", 1, {
       logger: (m) => {
@@ -36,9 +42,9 @@ const Index = () => {
     try {
       const { data } = await worker.recognize(file);
       setExtractedText(data.text);
-      const parsedData = parseInvoiceText(data.text);
-      setInvoiceData(parsedData);
-      setStatus("Text extraction complete!");
+      const parsed = parseInvoiceText(data.text);
+      setParsedInvoice(parsed);
+      setStatus("Invoice extraction complete!");
     } catch (error) {
       console.error("OCR Error:", error);
       setStatus("Error processing image");
@@ -65,7 +71,10 @@ const Index = () => {
     setImageFile(null);
     setImageUrl("");
     setExtractedText("");
-    setInvoiceData({});
+    setParsedInvoice({
+      metadata: {},
+      lineItems: [],
+    });
     setProgress(0);
     setStatus("");
   }, [imageUrl]);
@@ -104,7 +113,7 @@ const Index = () => {
           )}
 
           {extractedText && !isProcessing && (
-            <InvoiceDataDisplay data={invoiceData} rawText={extractedText} />
+            <InvoiceDataDisplay parsedInvoice={parsedInvoice} rawText={extractedText} />
           )}
         </div>
       </div>
