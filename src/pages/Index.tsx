@@ -3,7 +3,8 @@ import { createWorker } from "tesseract.js";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ProcessingIndicator } from "@/components/ProcessingIndicator";
-import { TextResult } from "@/components/TextResult";
+import { InvoiceDataDisplay } from "@/components/InvoiceDataDisplay";
+import { parseInvoiceText, InvoiceData } from "@/utils/invoiceParser";
 import { FileText } from "lucide-react";
 
 const Index = () => {
@@ -13,11 +14,13 @@ const Index = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [extractedText, setExtractedText] = useState("");
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>({});
 
   const processImage = useCallback(async (file: File) => {
     setIsProcessing(true);
     setProgress(0);
     setExtractedText("");
+    setInvoiceData({});
 
     const worker = await createWorker("eng", 1, {
       logger: (m) => {
@@ -33,6 +36,8 @@ const Index = () => {
     try {
       const { data } = await worker.recognize(file);
       setExtractedText(data.text);
+      const parsedData = parseInvoiceText(data.text);
+      setInvoiceData(parsedData);
       setStatus("Text extraction complete!");
     } catch (error) {
       console.error("OCR Error:", error);
@@ -60,6 +65,7 @@ const Index = () => {
     setImageFile(null);
     setImageUrl("");
     setExtractedText("");
+    setInvoiceData({});
     setProgress(0);
     setStatus("");
   }, [imageUrl]);
@@ -73,10 +79,10 @@ const Index = () => {
             <FileText className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-3 bg-gradient-primary bg-clip-text text-transparent">
-            Image to Text
+            Invoice OCR Scanner
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Upload an image and extract text instantly using advanced OCR technology
+            Upload invoice images and extract structured data in key:value pairs
           </p>
         </div>
 
@@ -98,7 +104,7 @@ const Index = () => {
           )}
 
           {extractedText && !isProcessing && (
-            <TextResult text={extractedText} />
+            <InvoiceDataDisplay data={invoiceData} rawText={extractedText} />
           )}
         </div>
       </div>
