@@ -3,9 +3,10 @@ import { createWorker } from "tesseract.js";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ProcessingIndicator } from "@/components/ProcessingIndicator";
-import { InvoiceDataDisplay } from "@/components/InvoiceDataDisplay";
-import { parseInvoiceText, ParsedInvoice } from "@/utils/invoiceParser";
+import { AIInvoiceDisplay } from "@/components/AIInvoiceDisplay";
+import { extractInvoiceWithAI, AIInvoiceData } from "@/utils/invoiceExtractor";
 import { FileText } from "lucide-react";
+import { toast } from "sonner";
 
 const Index = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -14,19 +15,13 @@ const Index = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [extractedText, setExtractedText] = useState("");
-  const [parsedInvoice, setParsedInvoice] = useState<ParsedInvoice>({
-    metadata: {},
-    lineItems: [],
-  });
+  const [aiInvoiceData, setAiInvoiceData] = useState<AIInvoiceData | null>(null);
 
   const processImage = useCallback(async (file: File) => {
     setIsProcessing(true);
     setProgress(0);
     setExtractedText("");
-    setParsedInvoice({
-      metadata: {},
-      lineItems: [],
-    });
+    setAiInvoiceData(null);
 
     const worker = await createWorker("eng", 1, {
       logger: (m) => {
@@ -42,12 +37,33 @@ const Index = () => {
     try {
       const { data } = await worker.recognize(file);
       setExtractedText(data.text);
-      const parsed = parseInvoiceText(data.text);
-      setParsedInvoice(parsed);
-      setStatus("Invoice extraction complete!");
+      setStatus("OCR complete! Extracting invoice data with AI...");
+      setProgress(70);
+
+      // Use AI to extract structured data
+      try {
+        const aiData = await extractInvoiceWithAI(data.text);
+        setAiInvoiceData(aiData);
+        setStatus("Invoice extraction complete!");
+        setProgress(100);
+        toast.success("Invoice data extracted successfully!");
+      } catch (aiError: any) {
+        console.error("AI extraction error:", aiError);
+        
+        if (aiError.message?.includes("Rate limit")) {
+          toast.error("Rate limit exceeded. Please try again in a moment.");
+        } else if (aiError.message?.includes("credits")) {
+          toast.error("AI credits exhausted. Please add credits to continue.");
+        } else {
+          toast.error("Failed to extract invoice data with AI");
+        }
+        
+        setStatus("OCR complete, but AI extraction failed");
+      }
     } catch (error) {
       console.error("OCR Error:", error);
       setStatus("Error processing image");
+      toast.error("Failed to process image");
     } finally {
       await worker.terminate();
       setIsProcessing(false);
@@ -71,10 +87,7 @@ const Index = () => {
     setImageFile(null);
     setImageUrl("");
     setExtractedText("");
-    setParsedInvoice({
-      metadata: {},
-      lineItems: [],
-    });
+    setAiInvoiceData(null);
     setProgress(0);
     setStatus("");
   }, [imageUrl]);
@@ -112,8 +125,8 @@ const Index = () => {
             <ProcessingIndicator progress={progress} status={status} />
           )}
 
-          {extractedText && !isProcessing && (
-            <InvoiceDataDisplay parsedInvoice={parsedInvoice} rawText={extractedText} />
+          {aiInvoiceData && !isProcessing && (
+            <AIInvoiceDisplay data={aiInvoiceData} />
           )}
         </div>
       </div>
