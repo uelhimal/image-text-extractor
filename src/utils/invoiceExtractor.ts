@@ -5,19 +5,23 @@ export interface AILineItem {
   quantity?: number;
   unit_price?: number;
   amount: number;
+  category?: string;
 }
 
 export interface AIInvoiceData {
   invoice_number?: string;
   invoice_date?: string;
+  invoice_time?: string;
   due_date?: string;
   vendor_name?: string;
   customer_name?: string;
+  payment_type?: string;
   line_items: AILineItem[];
   subtotal?: number;
   discount?: number;
   tax?: number;
   total: number;
+  notes?: string;
 }
 
 export const extractInvoiceWithAI = async (text: string): Promise<AIInvoiceData> => {

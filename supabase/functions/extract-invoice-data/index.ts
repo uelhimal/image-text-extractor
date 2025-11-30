@@ -10,19 +10,23 @@ interface LineItem {
   quantity?: number;
   unit_price?: number;
   amount: number;
+  category?: string;
 }
 
 interface InvoiceData {
   invoice_number?: string;
   invoice_date?: string;
+  invoice_time?: string;
   due_date?: string;
   vendor_name?: string;
   customer_name?: string;
+  payment_type?: string;
   line_items: LineItem[];
   subtotal?: number;
   discount?: number;
   tax?: number;
   total: number;
+  notes?: string;
 }
 
 serve(async (req) => {
@@ -72,11 +76,19 @@ serve(async (req) => {
                   },
                   invoice_date: {
                     type: "string",
-                    description: "The invoice date",
+                    description: "The invoice date in YYYY-MM-DD format",
+                  },
+                  invoice_time: {
+                    type: "string",
+                    description: "The invoice time in HH:MM format if available",
                   },
                   due_date: {
                     type: "string",
-                    description: "The payment due date",
+                    description: "The payment due date in YYYY-MM-DD format",
+                  },
+                  payment_type: {
+                    type: "string",
+                    description: "Payment method used (e.g., Cash, Card, Credit, Bank Transfer, Check)",
                   },
                   vendor_name: {
                     type: "string",
@@ -108,6 +120,10 @@ serve(async (req) => {
                           type: "number",
                           description: "Total amount for this line item",
                         },
+                        category: {
+                          type: "string",
+                          description: "Item category (e.g., Food & Beverages, Office Supplies, Services, Hardware, Software, Travel, Utilities)",
+                        },
                       },
                       required: ["description", "amount"],
                     },
@@ -127,6 +143,10 @@ serve(async (req) => {
                   total: {
                     type: "number",
                     description: "Final total amount",
+                  },
+                  notes: {
+                    type: "string",
+                    description: "Additional notes or observations about the invoice (e.g., payment terms, special instructions, irregularities)",
                   },
                 },
                 required: ["line_items", "total"],

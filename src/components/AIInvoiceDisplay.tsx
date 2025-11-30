@@ -1,4 +1,4 @@
-import { Copy, Check, FileText, Calendar, Building2, User } from "lucide-react";
+import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, Tag, StickyNote } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -61,7 +61,7 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
       </div>
 
       {/* Invoice Metadata */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.invoice_number && (
           <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary-glow/5 border-primary/20">
             <div className="flex items-start gap-3">
@@ -80,7 +80,10 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
               <Calendar className="w-5 h-5 text-accent mt-0.5" />
               <div>
                 <p className="text-sm text-muted-foreground">Invoice Date</p>
-                <p className="font-semibold text-foreground">{data.invoice_date}</p>
+                <p className="font-semibold text-foreground">
+                  {data.invoice_date}
+                  {data.invoice_time && <span className="ml-2 text-sm text-muted-foreground">{data.invoice_time}</span>}
+                </p>
               </div>
             </div>
           </Card>
@@ -121,6 +124,18 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
             </div>
           </Card>
         )}
+
+        {data.payment_type && (
+          <Card className="p-4 bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
+            <div className="flex items-start gap-3">
+              <CreditCard className="w-5 h-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Payment Type</p>
+                <p className="font-semibold text-foreground">{data.payment_type}</p>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Line Items Table */}
@@ -134,6 +149,7 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   <TableHead className="font-semibold">Description</TableHead>
+                  <TableHead className="font-semibold">Category</TableHead>
                   <TableHead className="text-center font-semibold">Quantity</TableHead>
                   <TableHead className="text-right font-semibold">Unit Price</TableHead>
                   <TableHead className="text-right font-semibold">Amount</TableHead>
@@ -143,6 +159,16 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
                 {data.line_items.map((item, index) => (
                   <TableRow key={index} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell>
+                      {item.category ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          <Tag className="w-3 h-3" />
+                          {item.category}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">{item.quantity || "-"}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
                     <TableCell className="text-right font-semibold">
@@ -180,6 +206,23 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
                 <span className="text-primary">{formatCurrency(data.total)}</span>
               </div>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Notes Section */}
+      {data.notes && (
+        <Card className="overflow-hidden">
+          <div className="bg-muted/50 px-6 py-3 border-b border-border">
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <StickyNote className="w-4 h-4 text-primary" />
+              Notes & Observations
+            </h4>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {data.notes}
+            </p>
           </div>
         </Card>
       )}
