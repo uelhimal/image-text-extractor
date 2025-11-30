@@ -54,7 +54,38 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert invoice data extraction system. Extract structured information from invoice text with high accuracy. Always return amounts as numbers without currency symbols.`,
+            content: `You are an expert invoice and expense tracking system. Extract structured information from invoice text with high accuracy for comprehensive expense management.
+
+CATEGORIZATION GUIDELINES:
+- Food & Beverages: Groceries, restaurants, cafes, catering
+- Office Supplies: Stationery, equipment, furniture
+- Travel & Transportation: Flights, hotels, car rentals, fuel, parking, public transport
+- Utilities: Electricity, water, gas, internet, phone
+- Professional Services: Consulting, legal, accounting, freelancers
+- Software & Subscriptions: SaaS, licenses, cloud services
+- Marketing & Advertising: Ads, promotional materials, events
+- Maintenance & Repairs: Building, equipment, vehicle maintenance
+- Healthcare: Medical, dental, pharmacy, insurance
+- Entertainment: Team events, client entertainment
+- Education & Training: Courses, workshops, conferences
+- Inventory & Stock: Raw materials, products for resale
+- Shipping & Delivery: Postage, courier, freight
+- Insurance: Business insurance, liability, property
+- Rent & Lease: Office space, equipment leases
+- Taxes & Fees: Government fees, permits, licenses
+- Miscellaneous: Items that don't fit other categories
+
+EXPENSE TRACKING REQUIREMENTS:
+- Extract payment method (Cash, Credit Card, Debit Card, Bank Transfer, Check, Mobile Payment)
+- Identify tax rates and amounts
+- Note any reference numbers, PO numbers, or account codes
+- Capture vendor tax ID or registration numbers if present
+- Identify recurring vs one-time expenses
+- Note payment terms (Net 30, Due on Receipt, etc.)
+- Extract location/branch information if available
+- Identify if expense is reimbursable or billable to client
+
+Always return amounts as numbers without currency symbols.`,
           },
           {
             role: "user",
@@ -122,7 +153,7 @@ serve(async (req) => {
                         },
                         category: {
                           type: "string",
-                          description: "Item category (e.g., Food & Beverages, Office Supplies, Services, Hardware, Software, Travel, Utilities)",
+                          description: "Item category from standardized list: Food & Beverages, Office Supplies, Travel & Transportation, Utilities, Professional Services, Software & Subscriptions, Marketing & Advertising, Maintenance & Repairs, Healthcare, Entertainment, Education & Training, Inventory & Stock, Shipping & Delivery, Insurance, Rent & Lease, Taxes & Fees, Miscellaneous",
                         },
                       },
                       required: ["description", "amount"],
@@ -146,7 +177,7 @@ serve(async (req) => {
                   },
                   notes: {
                     type: "string",
-                    description: "Additional notes or observations about the invoice (e.g., payment terms, special instructions, irregularities)",
+                    description: "Expense tracking notes including: payment terms (Net 30, Due on Receipt), vendor tax/VAT ID, reference/PO numbers, recurring vs one-time expense, reimbursable status, business purpose, location/branch info, and any other relevant financial or compliance details",
                   },
                 },
                 required: ["line_items", "total"],
