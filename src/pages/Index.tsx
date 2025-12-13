@@ -3,22 +3,26 @@ import { createWorker } from "tesseract.js";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ProcessingIndicator } from "@/components/ProcessingIndicator";
+import { RawTextDisplay } from "@/components/RawTextDisplay";
+import { AIProcessingIndicator } from "@/components/AIProcessingIndicator";
 import { AIInvoiceDisplay } from "@/components/AIInvoiceDisplay";
 import { extractInvoiceWithAI, AIInvoiceData } from "@/utils/invoiceExtractor";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
 
+type ProcessingStage = "idle" | "ocr" | "ocr-complete" | "ai-processing" | "complete";
+
 const Index = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [stage, setStage] = useState<ProcessingStage>("idle");
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [extractedText, setExtractedText] = useState("");
   const [aiInvoiceData, setAiInvoiceData] = useState<AIInvoiceData | null>(null);
 
   const processImage = useCallback(async (file: File) => {
-    setIsProcessing(true);
+    setStage("ocr");
     setProgress(0);
     setExtractedText("");
     setAiInvoiceData(null);
@@ -37,38 +41,55 @@ const Index = () => {
     try {
       const { data } = await worker.recognize(file);
       setExtractedText(data.text);
-      setStatus("OCR complete! Extracting invoice data with AI...");
-      setProgress(70);
-
-      // Use AI to extract structured data
-      try {
-        const aiData = await extractInvoiceWithAI(data.text);
-        setAiInvoiceData(aiData);
-        setStatus("Invoice extraction complete!");
-        setProgress(100);
-        toast.success("Invoice data extracted successfully!");
-      } catch (aiError: any) {
-        console.error("AI extraction error:", aiError);
-        
-        if (aiError.message?.includes("Rate limit")) {
-          toast.error("Rate limit exceeded. Please try again in a moment.");
-        } else if (aiError.message?.includes("credits")) {
-          toast.error("AI credits exhausted. Please add credits to continue.");
-        } else {
-          toast.error("Failed to extract invoice data with AI");
-        }
-        
-        setStatus("OCR complete, but AI extraction failed");
-      }
+      setStatus("OCR complete!");
+      setProgress(100);
+      setStage("ocr-complete");
+      toast.success("Text extracted successfully! Click the button to start AI categorization.");
     } catch (error) {
       console.error("OCR Error:", error);
       setStatus("Error processing image");
       toast.error("Failed to process image");
+      setStage("idle");
     } finally {
       await worker.terminate();
-      setIsProcessing(false);
     }
   }, []);
+
+  const startAIExtraction = useCallback(async () => {
+    if (!extractedText) return;
+    
+    setStage("ai-processing");
+    
+    // Start AI extraction with minimum 30-second display
+    const startTime = Date.now();
+    const minDisplayTime = 30000; // 30 seconds
+
+    try {
+      const aiData = await extractInvoiceWithAI(extractedText);
+      
+      // Ensure minimum display time
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minDisplayTime) {
+        await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed));
+      }
+      
+      setAiInvoiceData(aiData);
+      setStage("complete");
+      toast.success("Invoice data extracted and categorized successfully!");
+    } catch (aiError: any) {
+      console.error("AI extraction error:", aiError);
+      
+      if (aiError.message?.includes("Rate limit")) {
+        toast.error("Rate limit exceeded. Please try again in a moment.");
+      } else if (aiError.message?.includes("credits")) {
+        toast.error("AI credits exhausted. Please add credits to continue.");
+      } else {
+        toast.error("Failed to extract invoice data with AI");
+      }
+      
+      setStage("ocr-complete");
+    }
+  }, [extractedText]);
 
   const handleImageSelect = useCallback(
     (file: File) => {
@@ -90,6 +111,7 @@ const Index = () => {
     setAiInvoiceData(null);
     setProgress(0);
     setStatus("");
+    setStage("idle");
   }, [imageUrl]);
 
   return (
@@ -110,22 +132,34 @@ const Index = () => {
 
         {/* Main Content */}
         <div className="space-y-6">
-          {!imageFile && (
+          {stage === "idle" && !imageFile && (
             <ImageUpload
               onImageSelect={handleImageSelect}
-              isProcessing={isProcessing}
+              isProcessing={false}
             />
           )}
 
-          {imageFile && imageUrl && (
+          {imageFile && imageUrl && stage !== "complete" && (
             <ImagePreview imageUrl={imageUrl} onRemove={handleRemoveImage} />
           )}
 
-          {isProcessing && (
+          {stage === "ocr" && (
             <ProcessingIndicator progress={progress} status={status} />
           )}
 
-          {aiInvoiceData && !isProcessing && (
+          {stage === "ocr-complete" && extractedText && (
+            <RawTextDisplay 
+              text={extractedText} 
+              onStartAI={startAIExtraction}
+              isProcessing={false}
+            />
+          )}
+
+          {stage === "ai-processing" && (
+            <AIProcessingIndicator duration={30} />
+          )}
+
+          {stage === "complete" && aiInvoiceData && (
             <AIInvoiceDisplay data={aiInvoiceData} />
           )}
         </div>
