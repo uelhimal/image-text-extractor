@@ -160,7 +160,7 @@ const Index = () => {
           )}
 
           {stage === "complete" && aiInvoiceData && (
-            <AIInvoiceDisplay data={aiInvoiceData} />
+            <AIInvoiceDisplay data={aiInvoiceData} onReset={handleRemoveImage} />
           )}
         </div>
       </div>
