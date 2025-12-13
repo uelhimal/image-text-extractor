@@ -1,4 +1,4 @@
-import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, Tag, StickyNote } from "lucide-react";
+import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, Tag, StickyNote, RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,9 +15,10 @@ import {
 
 interface AIInvoiceDisplayProps {
   data: AIInvoiceData;
+  onReset?: () => void;
 }
 
-export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
+export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyJSON = async () => {
@@ -225,6 +226,21 @@ export const AIInvoiceDisplay = ({ data }: AIInvoiceDisplayProps) => {
             </p>
           </div>
         </Card>
+      )}
+
+      {/* Try Another Image Button */}
+      {onReset && (
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={onReset}
+            variant="outline"
+            size="lg"
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Try Another Image
+          </Button>
+        </div>
       )}
     </div>
   );
