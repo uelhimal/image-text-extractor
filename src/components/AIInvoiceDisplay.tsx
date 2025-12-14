@@ -1,8 +1,8 @@
-import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, RotateCcw, Plus, Send, DollarSign, Briefcase, Lock, Globe } from "lucide-react";
+import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, RotateCcw, Send, DollarSign, Briefcase, Lock, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AIInvoiceData, AILineItem } from "@/utils/invoiceExtractor";
+import { AIInvoiceData } from "@/utils/invoiceExtractor";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -14,22 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 const DEFAULT_CATEGORIES = [
   "Advertising & Marketing",
@@ -69,10 +53,28 @@ interface AIInvoiceDisplayProps {
   onReset?: () => void;
 }
 
+// Helper function to format line items as text for public notes
+const formatLineItemsAsText = (lineItems?: AIInvoiceData["line_items"]): string => {
+  if (!lineItems || lineItems.length === 0) return "";
+  
+  return lineItems
+    .map((item, index) => {
+      const parts = [];
+      if (item.description) parts.push(item.description);
+      if (item.quantity) parts.push(`Qty: ${item.quantity}`);
+      if (item.amount) parts.push(`$${item.amount.toFixed(2)}`);
+      if (item.category) parts.push(`[${item.category}]`);
+      return `${index + 1}. ${parts.join(" - ")}`;
+    })
+    .join("\n");
+};
+
 export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
   const [copied, setCopied] = useState(false);
   const [editableData, setEditableData] = useState<ExtendedFormData>(() => {
-    // Merge notes into the first line item's description if notes exist
+    // Format line items as text for public notes
+    const lineItemsText = formatLineItemsAsText(data.line_items);
+    
     const baseData: ExtendedFormData = {
       ...data,
       vendor: data.vendor_name || "",
@@ -82,23 +84,13 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
       assigned_user: "",
       currency: "USD",
       private_notes: "",
-      public_notes: "",
+      public_notes: lineItemsText,
       description_comments: data.notes || "",
     };
     
-    // Set default category for line items
-    if (data.line_items && data.line_items.length > 0) {
-      baseData.line_items = data.line_items.map((item) => ({
-        ...item,
-        category: item.category || DEFAULT_CATEGORIES[0],
-      }));
-    }
-    
     return baseData;
   });
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [newCategory, setNewCategory] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [categories] = useState<string[]>(DEFAULT_CATEGORIES);
 
   const handleCopyJSON = async () => {
     await navigator.clipboard.writeText(JSON.stringify(editableData, null, 2));
@@ -120,7 +112,6 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
       private_notes: editableData.private_notes,
       public_notes: editableData.public_notes,
       description_comments: editableData.description_comments,
-      line_items: editableData.line_items,
     };
     console.log("Form Data:", formData);
     toast.success("Form data logged to console!");
@@ -133,24 +124,6 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
 
   const updateField = (field: keyof ExtendedFormData, value: string | number | undefined) => {
     setEditableData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const updateLineItem = (index: number, field: keyof AILineItem, value: string | number | undefined) => {
-    setEditableData(prev => ({
-      ...prev,
-      line_items: prev.line_items?.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
-    }));
-  };
-
-  const handleAddCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories(prev => [...prev, newCategory.trim()]);
-      toast.success(`Category "${newCategory.trim()}" added!`);
-      setNewCategory("");
-      setDialogOpen(false);
-    }
   };
 
   return (
@@ -337,7 +310,7 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
               value={editableData.private_notes || ""}
               onChange={(e) => updateField("private_notes", e.target.value)}
               placeholder="Enter private notes (internal use only)..."
-              rows={2}
+              rows={3}
             />
           </div>
 
@@ -351,165 +324,11 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
               value={editableData.public_notes || ""}
               onChange={(e) => updateField("public_notes", e.target.value)}
               placeholder="Enter public notes (visible to client)..."
-              rows={2}
+              rows={3}
             />
           </div>
         </div>
       </Card>
-
-      {/* Line Items Table */}
-      {editableData.line_items && editableData.line_items.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="bg-muted/50 px-6 py-3 border-b border-border flex items-center justify-between">
-            <h4 className="font-semibold text-foreground">Line Items</h4>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1">
-                  <Plus className="w-4 h-4" />
-                  Add Category
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Category</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new_category">Category Name</Label>
-                    <Input
-                      id="new_category"
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      placeholder="Enter category name"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAddCategory();
-                      }}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddCategory}>Add Category</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="font-semibold min-w-[250px]">Item Name</TableHead>
-                  <TableHead className="font-semibold min-w-[180px]">Category</TableHead>
-                  <TableHead className="text-center font-semibold w-[100px]">Quantity</TableHead>
-                  <TableHead className="text-right font-semibold w-[120px]">Amount ($)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {editableData.line_items.map((item, index) => (
-                  <TableRow key={index} className="hover:bg-muted/20 transition-colors">
-                    <TableCell>
-                      <Input
-                        value={item.description || ""}
-                        onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                        placeholder="Item name"
-                        className="border-0 bg-transparent focus-visible:ring-1"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={item.category || DEFAULT_CATEGORIES[0]}
-                        onValueChange={(value) => updateLineItem(index, "category", value)}
-                      >
-                        <SelectTrigger className="border-0 bg-transparent focus:ring-1">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border border-border z-50">
-                          {categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={item.quantity || ""}
-                        onChange={(e) => updateLineItem(index, "quantity", e.target.value ? parseFloat(e.target.value) : undefined)}
-                        placeholder="Qty"
-                        className="border-0 bg-transparent text-center focus-visible:ring-1"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formatCurrency(item.amount)}
-                        onChange={(e) => updateLineItem(index, "amount", e.target.value ? parseFloat(e.target.value) : undefined)}
-                        placeholder="0.00"
-                        className="border-0 bg-transparent text-right focus-visible:ring-1"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Totals Section */}
-          <div className="border-t border-border bg-gradient-to-br from-muted/30 to-muted/10 p-6">
-            <div className="max-w-md ml-auto space-y-3">
-              <div className="flex justify-between items-center gap-4">
-                <Label className="text-muted-foreground">Subtotal:</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formatCurrency(editableData.subtotal)}
-                  onChange={(e) => updateField("subtotal", e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-32 text-right"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="flex justify-between items-center gap-4">
-                <Label className="text-accent">Discount:</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formatCurrency(editableData.discount)}
-                  onChange={(e) => updateField("discount", e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-32 text-right"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="flex justify-between items-center gap-4">
-                <Label className="text-muted-foreground">Tax:</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formatCurrency(editableData.tax)}
-                  onChange={(e) => updateField("tax", e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-32 text-right"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="flex justify-between items-center gap-4 border-t-2 border-primary/30 pt-3 mt-2">
-                <Label className="text-xl font-bold text-foreground">Total:</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formatCurrency(editableData.total)}
-                  onChange={(e) => updateField("total", e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-32 text-right text-lg font-bold text-primary"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* Action Buttons */}
       <div className="flex justify-center gap-4 pt-4">
