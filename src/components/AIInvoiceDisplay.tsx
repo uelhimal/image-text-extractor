@@ -1,4 +1,4 @@
-import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, RotateCcw, Send, DollarSign, Briefcase, Lock, Globe } from "lucide-react";
+import { Copy, Check, FileText, Calendar, Building2, User, CreditCard, RotateCcw, Send, PoundSterling, Briefcase, Lock, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ const formatLineItemsAsText = (lineItems?: AIInvoiceData["line_items"]): string 
       const parts = [];
       if (item.description) parts.push(item.description);
       if (item.quantity) parts.push(`Qty: ${item.quantity}`);
-      if (item.amount) parts.push(`$${item.amount.toFixed(2)}`);
+      if (item.amount) parts.push(`£${item.amount.toFixed(2)}`);
       if (item.category) parts.push(`[${item.category}]`);
       return `${index + 1}. ${parts.join(" - ")}`;
     })
@@ -234,7 +234,7 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="total_amount" className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" />
+              <PoundSterling className="w-4 h-4 text-primary" />
               Total Amount
             </Label>
             <Input
