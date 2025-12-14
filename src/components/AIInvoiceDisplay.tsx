@@ -34,7 +34,7 @@ const DEFAULT_CATEGORIES = [
   "Other Expenses",
 ];
 
-const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "CAD", "AUD", "INR", "JPY"];
+const CURRENCY_OPTIONS = ["GBP", "USD", "EUR", "CAD", "AUD", "INR", "JPY"];
 
 interface ExtendedFormData extends AIInvoiceData {
   vendor?: string;
@@ -82,7 +82,7 @@ export const AIInvoiceDisplay = ({ data, onReset }: AIInvoiceDisplayProps) => {
       project: "",
       category: DEFAULT_CATEGORIES[0],
       assigned_user: "",
-      currency: "USD",
+      currency: "GBP",
       private_notes: "",
       public_notes: lineItemsText,
       description_comments: data.notes || "",
